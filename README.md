@@ -26,3 +26,18 @@ Feel free to email me at austin.jay.ives+metrical@gmail.com.
 
 ## License
 This project is licensed under the MIT open source license
+
+## Environment Variables
+
+To configure the library via environment variables the following environment variables are used:
+
+- `METRICAL_NETWORK_PROTOCOL` - [UDP|TCP]
+- `METRICAL_NETWORK_DESTINATION` - (ip\_address:port) or (ip\_address)
+- `METRICAL_SEND_METHOD` - [StatsD|Graphite|Graphite\_pickle]
+- `METRICAL_NAMESPACE` - A path to put all created metrics underneath. Of the form `foo.myBar.baz`.
+- `METRICAL_FLUSH_INTERVAL` - An interval of time (in seconds) before flushing the metrics buffer. 
+- `METRICAL_FLUSH_AMOUNT` - The maximum amount of records to store in the metrics buffer at any one time.
+
+Additionally, a prefix can be used with the environment variables. For example, if the prefix `MY_PROJ` was used, the `METRICAL_NETWORK_PROTOCOL` environment variable
+will be looked up under `MY_PROJ_METRICAL_NETWORK_PROTOCOL`. 
+
