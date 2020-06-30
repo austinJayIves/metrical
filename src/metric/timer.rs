@@ -30,6 +30,12 @@ impl TimerBuilder {
     }
 }
 
+/// A metric used to measure the time elapsed during a task or process.
+///
+/// # Examples:
+/// - Timing a critical query to a database
+/// - Timing how long it takes to return a message to a user once an HTTP request has been received
+///
 pub struct Timer {
     start: Instant,
     stop: Option<Instant>,

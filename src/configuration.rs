@@ -4,6 +4,7 @@ use crate::metric::{MetricData, Namespace};
 use std::net::IpAddr;
 use crate::MetricalError;
 
+/// Options used to determine when to send metrics from memory to a server.
 #[derive(Clone)]
 pub struct FlushConfigurationOptions {
     pub flush_after_amount: Option<usize>,
@@ -11,17 +12,23 @@ pub struct FlushConfigurationOptions {
 
 }
 
+/// Nonessential options available to a configuration
 pub struct ConfigurationOptions {
     pub namespace: Option<Namespace>,
     pub flush: FlushConfigurationOptions
 }
 
+/// A configuration of the metrical library.
+///
+/// This configuration contains information necessary to send messages to Graphite
+/// and information on which protocol to use to communicate with Graphite/Statsd
 pub struct Configuration {
     connection: Connection,
     pub protocol: Protocol,
     pub options: ConfigurationOptions,
 }
 
+/// Helper to build a configuration piece by piece.
 pub struct ConfigurationBuilder {
     ip_addr: Option<IpAddr>,
     port: Option<u16>,

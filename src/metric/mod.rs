@@ -35,9 +35,9 @@ pub fn metric_test_data() -> [MetricData; 4] {
         MetricData{name: "HelloCounter".to_owned(), occurred: 2,
             namespace: Option::Some("test".to_owned()), metric: MetricType::Counter(12) },
         MetricData{name: "HelloGauge".to_owned(), occurred: 3,
-            namespace: Option::Some("test".to_owned()), metric: MetricType::Gauge(13) },
+            namespace: Option::Some("test".to_owned()), metric: MetricType::Gauge(GaugeOptions::Increase(13))},
         MetricData{name: "HelloGauge".to_owned(), occurred: 4,
-            namespace: Option::Some("test".to_owned()), metric: MetricType::Gauge(-2) },
+            namespace: Option::Some("test".to_owned()), metric: MetricType::Gauge(GaugeOptions::Decrease(2)) },
     ]
 }
 
@@ -45,7 +45,7 @@ pub fn metric_test_data() -> [MetricData; 4] {
 pub enum MetricType {
     Counter(u32),
     Timer(u128),
-    Gauge(i32)
+    Gauge(GaugeOptions)
 }
 
 #[derive(Clone)]
@@ -80,3 +80,4 @@ mod gauge;
 pub use counter::{Counter, CounterBuilder};
 pub use timer::{Timer, TimerBuilder};
 pub use gauge::{Gauge, GaugeBuilder};
+use crate::metric::gauge::GaugeOptions;

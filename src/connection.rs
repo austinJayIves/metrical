@@ -59,7 +59,7 @@ impl Connection {
 #[cfg(test)]
 mod tests {
     mod udp {
-        use std::net::{UdpSocket, SocketAddr, IpAddr, Ipv4Addr, };
+        use std::net::{UdpSocket, IpAddr, Ipv4Addr, };
         use crate::connection::Connection;
         use crate::protocol::NetworkProtocol;
 
@@ -75,7 +75,7 @@ mod tests {
 
             let udp_listener = UdpSocket::bind("127.0.0.1:3435")?;
 
-            connection.send(&data[..]);
+            connection.send(&data[..])?;
             let mut buf: [u8; 256] = [0; 256];
             if let Ok(recieved) = udp_listener.recv(&mut buf) {
                 let buf = &mut buf[..recieved];
@@ -89,7 +89,7 @@ mod tests {
         }
     }
     mod tcp {
-        use std::net::{IpAddr, Ipv4Addr, TcpStream, TcpListener};
+        use std::net::{IpAddr, Ipv4Addr, TcpListener};
         use super::super::Connection;
         use crate::protocol::NetworkProtocol;
         use std::io::Read;

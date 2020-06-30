@@ -14,6 +14,37 @@ static NETWORK_PROTOCOL_ENV: &str = "METRICAL_NETWORK_PROTOCOL";
 static SEND_METHOD_ENV: &str = "METRICAL_SEND_METHOD";
 static NETWORK_DESTINATION_ENV: &str = "METRICAL_NETWORK_DESTINATION";
 
+/// Configure metrical by looking up environment variables.
+///
+/// # Variables:
+/// The following environment variables are used:
+///
+/// - METRICAL_FLUSH_INTERVAL: Specifies the interval (in milliseconds)
+/// to flush records to server. If unspecified, the library will not flush based on time since the last
+/// flush (Default: None).
+/// - METRICAL_FLUSH_AMOUNT: Specifies the amount of records to buffer before flushing records.
+/// If unspecified, the library will not limit the size of its buffer. (Default: None)
+///
+/// If both METRICAL_FLUSH_INTERVAL and METRICAL_FLUSH_AMOUNT are unspecified, only manual flushing
+/// will send data to the server.
+///
+/// - METRICAL_NAMESPACE: Specifies the namespace to place the metrics under.
+/// - METRICAL_NETWORK_PROTOCOL: Specifies the protocol \[UDP\|TCP\] to send the data as.
+///
+/// - METRICAL_SEND_METHOD: Specifies which method to send the data with. This can take on one of
+/// three values: Statsd, Graphite, Graphite_Pickle
+///
+/// - METRICAL_NETWORK_DESTINATION: Specifies the destination to send the metrics to. For now, this is
+/// limited to an ip_address:port, or just an ip_address. If port is unspecified, a sane default is
+/// chosen, given the send method.
+///
+/// # Arguments
+/// - prefix - Specifies a prefix for the environment variables to look for.
+///
+/// ## Example
+/// If the prefix was "MY_PROJECT", the environment variable for "METRICAL_FLUSH_INTERVAL" would be
+/// "MY_PROJECT_METRICAL_FLUSH_INTERVAL".
+///
 pub fn from_env(prefix: Option<&str>) -> Result<(), MetricalError>{
     let prefix = match prefix {
         Some("") => {
@@ -59,6 +90,21 @@ pub fn from_env(prefix: Option<&str>) -> Result<(), MetricalError>{
         Err(_) => return Err(MetricalError::ConfigurationInvalid("No value for network protocol environment variable"))
     };
 
+    let send_method: Protocol = match var(format!("{}{}", prefix, SEND_METHOD_ENV)) {
+        Ok(val) => match val.to_lowercase().as_ref() {
+            "statsd" => Protocol::StatsD,
+            "graphite" => Protocol::Graphite(Compression::Uncompressed),
+            #[cfg(feature = "pickle")]
+            "graphite_pickle" => Protocol::Graphite(Compression::Pickled),
+            _ => return Err(
+                MetricalError::ConfigurationInvalid("Unable to parse Send method.")
+            )
+        },
+        Err(_) => return Err(
+            MetricalError::ConfigurationInvalid("Send Method unspecified [STATSD|GRAPHITE|GRAPHITE_PICKLE]")
+        )
+    };
+
     let (ip_addr, port) = match var(
         format!("{}{}", prefix, NETWORK_DESTINATION_ENV)
     ) {
@@ -89,7 +135,12 @@ pub fn from_env(prefix: Option<&str>) -> Result<(), MetricalError>{
                         )
                     };
 
-                    let port = 2003;
+                    let port = match send_method {
+                        Protocol::StatsD => 8125,
+                        #[cfg(feature = "pickle")]
+                        Protocol::Graphite(Compression::Pickled) => 2004,
+                        Protocol::Graphite(Compression::Uncompressed) => 2003
+                    };
 
                     (ip_addr, port)
                 }
@@ -100,19 +151,6 @@ pub fn from_env(prefix: Option<&str>) -> Result<(), MetricalError>{
         )
     };
 
-    let send_method: Protocol = match var(format!("{}{}", prefix, SEND_METHOD_ENV)) {
-        Ok(val) => match val.to_lowercase().as_ref() {
-            "statsd" => Protocol::StatsD,
-            "graphite" => Protocol::Graphite(Compression::Uncompressed),
-            "graphite_pickle" => Protocol::Graphite(Compression::Pickled),
-            _ => return Err(
-                MetricalError::ConfigurationInvalid("Unable to parse Send method.")
-            )
-        },
-        Err(_) => return Err(
-            MetricalError::ConfigurationInvalid("Send Method unspecified [STATSD|GRAPHITE|GRAPHITE_PICKLE]")
-        )
-    };
 
     let configuration = ConfigurationBuilder::new()
         .ip_addr(ip_addr)
@@ -127,6 +165,9 @@ pub fn from_env(prefix: Option<&str>) -> Result<(), MetricalError>{
     from_config(configuration)
 }
 
+/// Initializes the metrical library with the given configuration.
+///
+/// You can create a configuration via the `ConfigurationBuilder` class.
 pub fn from_config(configuration: Configuration) -> Result<(), MetricalError> {
     let collector = Box::new(BufferedCollector::new(configuration));
 

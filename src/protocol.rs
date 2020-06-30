@@ -1,4 +1,6 @@
 use crate::metric::{MetricData, MetricType};
+
+#[cfg(feature = "pickle")]
 use serde_pickle::ser;
 
 pub enum Protocol {
@@ -61,6 +63,7 @@ impl Protocol {
         return (path, (value, occurred))
     }
 
+    #[cfg(feature = "pickle")]
     pub fn serialize_graphite_pickled<I>(metrics: I) -> Vec<u8> where
         I: IntoIterator<Item=MetricData>
     {
@@ -83,7 +86,10 @@ impl Protocol {
     {
         match self {
             Protocol::StatsD => Protocol::serialize_statsd(metrics),
+
+            #[cfg(feature = "pickle")]
             Protocol::Graphite(Compression::Pickled) => Protocol::serialize_graphite_pickled(metrics),
+
             Protocol::Graphite(Compression::Uncompressed) =>
                 Protocol::serialize_graphite_uncompressed(metrics)
         }
@@ -97,6 +103,7 @@ impl Protocol {
         let num_in_packet = match self {
             Protocol::StatsD => 14,
             Protocol::Graphite(Compression::Uncompressed) => 1,
+            #[cfg(feature = "pickle")]
             Protocol::Graphite(Compression::Pickled) => 14
         };
 
@@ -117,14 +124,16 @@ pub enum NetworkProtocol {
 }
 
 pub enum Compression {
+    #[cfg(feature = "pickle")]
     Pickled,
+
     Uncompressed,
 }
 
 #[cfg(test)]
 mod test {
     mod uncompressed {
-        use crate::metric::{MetricData, metric_test_data};
+        use crate::metric::{metric_test_data};
         use crate::protocol::{Protocol, Compression};
 
         #[test]
@@ -142,7 +151,7 @@ mod test {
             assert_eq!(payload2, b"test.HelloCounter 12 2".to_vec());
 
             let payload3 = result[2].clone();
-            assert_eq!(payload3, b"test.HelloGauge 13 3".to_vec());
+            assert_eq!(payload3, b"test.HelloGauge +13 3".to_vec());
 
             let payload4 = result[3].clone();
             assert_eq!(payload4, b"test.HelloGauge -2 4".to_vec());
@@ -150,20 +159,20 @@ mod test {
     }
 
     mod compressed {
-        use crate::metric::metric_test_data;
-        use crate::protocol::{Protocol, Compression};
-        use std::io::Write;
-
         #[test]
+        #[cfg(feature = "pickle")]
         pub fn it_should_pickle_properly() -> Result<(), Box<dyn std::error::Error>> {
+            use crate::metric::metric_test_data;
+            use crate::protocol::{Protocol, Compression};
             let data = metric_test_data().to_vec();
+
             let protocol = Protocol::Graphite(Compression::Pickled);
 
             let pickle_data: Vec<Vec<u8>> = protocol.serialize(data);
             let data_point = &pickle_data[0][4..];
 
             assert_eq!(pickle_data.len(), 1);
-            assert_eq!(data_point.len(), 158);
+            assert_eq!(data_point.len(), 159);
 
             Ok(())
         }
@@ -181,7 +190,7 @@ mod test {
             let data = protocol.serialize(data);
 
             assert_eq!(data.len(), 1);
-            assert_eq!(data[0].to_vec(), b"test.HelloTimer:1005|ms\ntest.HelloCounter:12|c\ntest.HelloGauge:13|g\ntest.HelloGauge:-2|g".to_vec());
+            assert_eq!(data[0].to_vec(), b"test.HelloTimer:1005|ms\ntest.HelloCounter:12|c\ntest.HelloGauge:+13|g\ntest.HelloGauge:-2|g".to_vec());
         }
     }
 }

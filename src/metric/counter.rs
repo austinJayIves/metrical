@@ -26,6 +26,14 @@ impl CounterBuilder {
     }
 }
 
+/// A metric used to measure incrementing values.
+///
+/// Counters can be created via the `metrical::counter` function,
+/// or the `metrical::namespace::counter` method.
+///
+/// # Examples
+/// - The number of login attempts you've handled
+/// - The number of cache lookups you've successfully made
 #[derive(Debug)]
 pub struct Counter {
     count: u32,
@@ -34,6 +42,7 @@ pub struct Counter {
 }
 
 impl Counter {
+    /// Increment the value of a counter by the given amount
     pub fn increment(&mut self, amount: u32) -> &Self {
         self.count += amount;
         self
